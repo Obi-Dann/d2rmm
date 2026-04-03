@@ -4,20 +4,24 @@ import { getAppPath } from './AppInfoAPI';
 
 // http://www.zezula.net/en/casc/casclib.html
 // https://github.com/ladislav-zezula/CascLib/blob/master/src/CascLib.h
+type KoffiTypeSpec = Parameters<typeof koffi.sizeof>[0];
+
 export type ICascLib = {
+  CASC_OPEN_STORAGE_ARGS: KoffiTypeSpec;
   CascCloseFile: (handle: unknown) => boolean;
   CascCloseStorage: (storage: unknown) => boolean;
+  CascOpenStorageEx: (
+    params: string | null,
+    openArgs: ICascOpenStorageArgs,
+    onlineStorage: boolean,
+    storageOut: unknown[],
+  ) => boolean;
   CascOpenFile: (
     storage: unknown,
     filePath: string,
     locale: number,
     flags: number,
     fileOut: unknown[],
-  ) => boolean;
-  CascOpenStorage: (
-    path: string,
-    flags: number,
-    storageOut: unknown[],
   ) => boolean;
   CascReadFile: (
     file: unknown,
@@ -26,6 +30,21 @@ export type ICascLib = {
     bytesReadOut: number[],
   ) => boolean;
   GetCascError: () => number;
+};
+
+export type ICascOpenStorageArgs = {
+  Size: number;
+  szLocalPath: string | null;
+  szCodeName: string | null;
+  szRegion: string | null;
+  PfnProgressCallback: unknown;
+  PtrProgressParam: unknown;
+  PfnProductCallback: unknown;
+  PtrProductParam: unknown;
+  dwLocaleMask: number;
+  dwFlags: number;
+  szBuildKey: string | null;
+  szCdnHostUrl: string | null;
 };
 
 let CASC_LIB: ICascLib;
@@ -48,15 +67,30 @@ export async function initCascLib(): Promise<void> {
 
   const pathLibrary = path.resolve(getAppPath(), 'tools', libName);
   const lib = koffi.load(pathLibrary);
+  const CASC_OPEN_STORAGE_ARGS = koffi.struct('CASC_OPEN_STORAGE_ARGS', {
+    Size: 'size_t',
+    szLocalPath: 'str',
+    szCodeName: 'str',
+    szRegion: 'str',
+    PfnProgressCallback: 'void *',
+    PtrProgressParam: 'void *',
+    PfnProductCallback: 'void *',
+    PtrProductParam: 'void *',
+    dwLocaleMask: 'uint32_t',
+    dwFlags: 'uint32_t',
+    szBuildKey: 'str',
+    szCdnHostUrl: 'str',
+  });
 
   CASC_LIB = {
+    CASC_OPEN_STORAGE_ARGS,
     CascCloseFile: lib.func('bool CascCloseFile(void *handle)'),
     CascCloseStorage: lib.func('bool CascCloseStorage(void *storage)'),
+    CascOpenStorageEx: lib.func(
+      'bool CascOpenStorageEx(str params, _Inout_ CASC_OPEN_STORAGE_ARGS * openArgs, bool bOnlineStorage, _Out_ void **storage)',
+    ),
     CascOpenFile: lib.func(
       'bool CascOpenFile(void *storage, str filePath, int locale, int flags, _Out_ void **file)',
-    ),
-    CascOpenStorage: lib.func(
-      'bool CascOpenStorage(str path, int flags, _Out_ void **storage)',
     ),
     CascReadFile: lib.func(
       'bool CascReadFile(void *file, void *buffer, int size, _Out_ uint32_t *bytesRead)',
@@ -67,6 +101,28 @@ export async function initCascLib(): Promise<void> {
 
 export function getCascLib(): ICascLib {
   return CASC_LIB;
+}
+
+export function createCascOpenStorageArgs(
+  localPath: string,
+  localeMask: number,
+  flags: number,
+): ICascOpenStorageArgs {
+  const cascLib = getCascLib();
+  return {
+    Size: koffi.sizeof(cascLib.CASC_OPEN_STORAGE_ARGS),
+    szLocalPath: localPath,
+    szCodeName: null,
+    szRegion: null,
+    PfnProgressCallback: null,
+    PtrProgressParam: null,
+    PfnProductCallback: null,
+    PtrProductParam: null,
+    dwLocaleMask: localeMask,
+    dwFlags: flags,
+    szBuildKey: null,
+    szCdnHostUrl: null,
+  };
 }
 
 // CascLib Error Codes for GetCascError()
