@@ -46,6 +46,10 @@ import { datamod } from './datamod';
 import { getQuickJSProxyAPI, getQuickJS } from './quickjs';
 import * as d2s from './third-party/d2s/index';
 
+// CascLib feature flags (from CascLib.h)
+// https://github.com/ladislav-zezula/CascLib/blob/master/src/CascLib.h
+const CASC_FEATURE_ALLOW_DOWNLOAD = 0x00002000; // Allow downloading internal files if not present locally
+
 let runtime: InstallationRuntime | null = null;
 
 export function getRuntime(): InstallationRuntime | null {
@@ -279,7 +283,7 @@ export const BridgeAPI: IBridgeAPI = {
     if (!cascStorageIsOpen) {
       for (const path of PATHS) {
         const storageOut: unknown[] = [null];
-        if (getCascLib().CascOpenStorage(path, 0, storageOut)) {
+        if (getCascLib().CascOpenStorage(path, CASC_FEATURE_ALLOW_DOWNLOAD, storageOut)) {
           cascStorage = storageOut[0];
           cascStorageIsOpen = true;
           break;

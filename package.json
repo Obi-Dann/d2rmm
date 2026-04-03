@@ -28,10 +28,18 @@
     "docs": "typedoc"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx}": ["cross-env NODE_ENV=development eslint --cache"],
-    "*.json,.{eslintrc,prettierrc}": ["prettier --parser json --write"],
-    "*.{css,scss}": ["prettier --single-quote --write"],
-    "*.{html,md,yml}": ["prettier --single-quote --write"]
+    "*.{js,jsx,ts,tsx}": [
+      "cross-env NODE_ENV=development eslint --cache"
+    ],
+    "*.json,.{eslintrc,prettierrc}": [
+      "prettier --parser json --write"
+    ],
+    "*.{css,scss}": [
+      "prettier --single-quote --write"
+    ],
+    "*.{html,md,yml}": [
+      "prettier --single-quote --write"
+    ]
   },
   "build": {
     "productName": "D2RMM",
@@ -43,22 +51,32 @@
       "**/node_modules/@jitl/quickjs-wasmfile-release-asyncify/dist/{index.js,emscripten-module.mjs,emscripten-module.wasm}"
     ],
     "win": {
-      "target": ["zip"]
+      "target": [
+        "zip"
+      ]
     },
     "mac": {
       "target": [
         {
           "target": "dmg",
-          "arch": ["arm64"]
+          "arch": [
+            "arm64"
+          ]
         }
       ],
       "category": "public.app-category.utilities"
     },
     "protocols": {
       "name": "nxm",
-      "schemes": ["nxm"]
+      "schemes": [
+        "nxm"
+      ]
     },
-    "files": ["dist", "node_modules", "package.json"],
+    "files": [
+      "dist",
+      "node_modules",
+      "package.json"
+    ],
     "directories": {
       "app": "release/app",
       "buildResources": "assets",
@@ -68,29 +86,39 @@
       {
         "from": "assets",
         "to": "assets",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       },
       {
         "from": "node_modules/source-map/lib",
         "to": "app.asar.unpacked/dist/main",
-        "filter": ["mappings.wasm"]
+        "filter": [
+          "mappings.wasm"
+        ]
       }
     ],
     "extraFiles": [
       {
         "from": "extras",
         "to": "./",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       },
       {
         "from": "tools",
         "to": "tools",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       },
       {
         "from": "mods.empty",
         "to": "mods",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "afterSign": "./afterSign.js",
@@ -307,14 +335,20 @@
   "prettier": {
     "overrides": [
       {
-        "files": ["package.json", ".prettierrc", ".eslintrc"],
+        "files": [
+          "package.json",
+          ".prettierrc",
+          ".eslintrc"
+        ],
         "options": {
           "parser": "json",
           "plugins": []
         }
       },
       {
-        "files": ["src/locales/*.json"],
+        "files": [
+          "src/locales/*.json"
+        ],
         "options": {
           "parser": "json"
         }

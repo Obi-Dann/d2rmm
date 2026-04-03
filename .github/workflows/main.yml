@@ -1,68 +1,66 @@
 name: Package and Release
 
 on:
-  push:
-    branches:
-      - master
+  pull_request:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  check-version:
-    runs-on: ubuntu-latest
-    outputs:
-      current_version: ${{ steps.check_versions.outputs.current_version }}
-      version_to_alias: ${{ steps.check_versions.outputs.version_to_alias }}
-      version_to_release: ${{ steps.check_versions.outputs.version_to_release }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  # check-version:
+  #   runs-on: ubuntu-latest
+  #   outputs:
+  #     current_version: ${{ steps.check_versions.outputs.current_version }}
+  #     version_to_alias: ${{ steps.check_versions.outputs.version_to_alias }}
+  #     version_to_release: ${{ steps.check_versions.outputs.version_to_release }}
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
 
-      - name: Get versions and compute alias
-        id: check_versions
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const { execSync } = require('child_process');
+  #     - name: Get versions and compute alias
+  #       id: check_versions
+  #       uses: actions/github-script@v7
+  #       with:
+  #         script: |
+  #           const { execSync } = require('child_process');
 
-            const currentVersion = JSON.parse(
-              execSync('git show HEAD:release/app/package.json').toString()
-            ).version;
-            core.setOutput('current_version', currentVersion);
-            console.log(`Current version: ${currentVersion}`);
+  #           const currentVersion = JSON.parse(
+  #             execSync('git show HEAD:release/app/package.json').toString()
+  #           ).version;
+  #           core.setOutput('current_version', currentVersion);
+  #           console.log(`Current version: ${currentVersion}`);
 
-            const { data: releases } = await github.rest.repos.listReleases({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              per_page: 100
-            });
+  #           const { data: releases } = await github.rest.repos.listReleases({
+  #             owner: context.repo.owner,
+  #             repo: context.repo.repo,
+  #             per_page: 100
+  #           });
 
-            const isAlias = r => r.body && r.body.includes('#alias');
+  #           const isAlias = r => r.body && r.body.includes('#alias');
 
-            // If there exists a non-alias pre-release for a different version,
-            // then we will need to finalize it (mark it as a release).
-            const previousPreRelease = releases.find(r =>
-              r.prerelease && !r.draft && r.tag_name !== `v${currentVersion}` && !isAlias(r)
-            );
-            const versionToRelease = previousPreRelease
-              ? previousPreRelease.tag_name.replace(/^v/, '')
-              : '';
-            core.setOutput('version_to_release', versionToRelease);
-            console.log(`Version to release: ${versionToRelease || 'n/a'}`);
+  #           // If there exists a non-alias pre-release for a different version,
+  #           // then we will need to finalize it (mark it as a release).
+  #           const previousPreRelease = releases.find(r =>
+  #             r.prerelease && !r.draft && r.tag_name !== `v${currentVersion}` && !isAlias(r)
+  #           );
+  #           const versionToRelease = previousPreRelease
+  #             ? previousPreRelease.tag_name.replace(/^v/, '')
+  #             : '';
+  #           core.setOutput('version_to_release', versionToRelease);
+  #           console.log(`Version to release: ${versionToRelease || 'n/a'}`);
 
-            // Find any alias-marked pre-release to update to point to the current version.
-            // To mark a pre-release as an alias, add "#alias" to its body on GitHub.
-            const aliasPreRelease = releases.find(r =>
-              r.prerelease && !r.draft && r.tag_name !== `v${currentVersion}` && isAlias(r)
-            );
-            const versionToAlias = aliasPreRelease ? aliasPreRelease.tag_name.replace(/^v/, '') : '';
-            core.setOutput('version_to_alias', versionToAlias);
-            console.log(`Version to alias: ${versionToAlias || 'n/a'}`);
+  #           // Find any alias-marked pre-release to update to point to the current version.
+  #           // To mark a pre-release as an alias, add "#alias" to its body on GitHub.
+  #           const aliasPreRelease = releases.find(r =>
+  #             r.prerelease && !r.draft && r.tag_name !== `v${currentVersion}` && isAlias(r)
+  #           );
+  #           const versionToAlias = aliasPreRelease ? aliasPreRelease.tag_name.replace(/^v/, '') : '';
+  #           core.setOutput('version_to_alias', versionToAlias);
+  #           console.log(`Version to alias: ${versionToAlias || 'n/a'}`);
 
-            await core.summary
-              .addRaw(`Current Version = ${currentVersion}\nVersion to alias = ${versionToAlias || 'n/a'}\nVersion to release = ${versionToRelease || 'n/a'}`)
-              .write();
+  #           await core.summary
+  #             .addRaw(`Current Version = ${currentVersion}\nVersion to alias = ${versionToAlias || 'n/a'}\nVersion to release = ${versionToRelease || 'n/a'}`)
+  #             .write();
 
   build-windows:
     runs-on: windows-2022
@@ -104,322 +102,322 @@ jobs:
           name: windows-build
           path: release/build/*.zip
 
-  build-macos:
-    runs-on: macos-14
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  # build-macos:
+  #   runs-on: macos-14
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
 
-      - name: Install Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
+  #     - name: Install Node
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 22
 
-      # GitHub git dependencies don't work in GitHub Action workflows,
-      # so we remove CascLib from package.json and clone it manually instead.
-      - name: Remove CascLib from package.json
-        run: npm remove CascLib --force
+  #     # GitHub git dependencies don't work in GitHub Action workflows,
+  #     # so we remove CascLib from package.json and clone it manually instead.
+  #     - name: Remove CascLib from package.json
+  #       run: npm remove CascLib --force
 
-      - name: Install dependencies
-        run: npm install
+  #     - name: Install dependencies
+  #       run: npm install
 
-      - name: Clone CascLib source
-        run: git clone https://github.com/ladislav-zezula/CascLib.git node_modules/CascLib
+  #     - name: Clone CascLib source
+  #       run: git clone https://github.com/ladislav-zezula/CascLib.git node_modules/CascLib
 
-      - name: Build package
-        run: npm run package
+  #     - name: Build package
+  #       run: npm run package
 
-      - name: Upload macOS artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: macos-build
-          path: release/build/*.dmg
+  #     - name: Upload macOS artifact
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: macos-build
+  #         path: release/build/*.dmg
 
-  release:
-    needs: [check-version, build-windows, build-macos]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download Windows artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: windows-build
-          path: artifacts
+  # release:
+  #   needs: [check-version, build-windows, build-macos]
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Download Windows artifact
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: windows-build
+  #         path: artifacts
 
-      - name: Download macOS artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: macos-build
-          path: artifacts
+  #     - name: Download macOS artifact
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: macos-build
+  #         path: artifacts
 
-      - name: Delete release
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const releaseName = "D2RMM ${{ needs.check-version.outputs.current_version }}";
-            const releases = await github.rest.repos.listReleases({
-              owner: context.repo.owner,
-              repo: context.repo.repo
-            });
-            const releaseToDelete = releases.data.find(release => release.name === releaseName);
-            if (releaseToDelete) {
-              await github.rest.repos.deleteRelease({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                release_id: releaseToDelete.id
-              });
-              console.log(`Release ${releaseName} deleted successfully.`);
-            } else {
-              console.log(`Release ${releaseName} not found.`);
-            }
+  #     - name: Delete release
+  #       uses: actions/github-script@v7
+  #       with:
+  #         script: |
+  #           const releaseName = "D2RMM ${{ needs.check-version.outputs.current_version }}";
+  #           const releases = await github.rest.repos.listReleases({
+  #             owner: context.repo.owner,
+  #             repo: context.repo.repo
+  #           });
+  #           const releaseToDelete = releases.data.find(release => release.name === releaseName);
+  #           if (releaseToDelete) {
+  #             await github.rest.repos.deleteRelease({
+  #               owner: context.repo.owner,
+  #               repo: context.repo.repo,
+  #               release_id: releaseToDelete.id
+  #             });
+  #             console.log(`Release ${releaseName} deleted successfully.`);
+  #           } else {
+  #             console.log(`Release ${releaseName} not found.`);
+  #           }
 
-      - name: Delete tag
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const tagName = "v${{ needs.check-version.outputs.current_version }}";
-            try {
-              await github.rest.git.deleteRef({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                ref: `tags/${tagName}`
-              });
-              console.log(`Tag ${tagName} deleted successfully.`);
-            } catch (e) {
-              if (e.message.includes('Reference does not exist')) {
-                console.log(`Tag ${tagName} not found.`);
-              } else {
-                console.log(`Tag ${tagName} not deleted.`, e);
-              }
-            }
+  #     - name: Delete tag
+  #       uses: actions/github-script@v7
+  #       with:
+  #         script: |
+  #           const tagName = "v${{ needs.check-version.outputs.current_version }}";
+  #           try {
+  #             await github.rest.git.deleteRef({
+  #               owner: context.repo.owner,
+  #               repo: context.repo.repo,
+  #               ref: `tags/${tagName}`
+  #             });
+  #             console.log(`Tag ${tagName} deleted successfully.`);
+  #           } catch (e) {
+  #             if (e.message.includes('Reference does not exist')) {
+  #               console.log(`Tag ${tagName} not found.`);
+  #             } else {
+  #               console.log(`Tag ${tagName} not deleted.`, e);
+  #             }
+  #           }
 
-      - name: Create tag
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const tagName = "v${{ needs.check-version.outputs.current_version }}";
-            try {
-              await github.rest.git.createRef({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                ref: `refs/tags/${tagName}`,
-                sha: context.sha
-              });
-              console.log(`Tag ${tagName} created successfully.`);
-            } catch (e) {
-              console.log(`Tag ${tagName} not created.`, e);
-              core.setFailed(e.message);
-            }
+  #     - name: Create tag
+  #       uses: actions/github-script@v7
+  #       with:
+  #         script: |
+  #           const tagName = "v${{ needs.check-version.outputs.current_version }}";
+  #           try {
+  #             await github.rest.git.createRef({
+  #               owner: context.repo.owner,
+  #               repo: context.repo.repo,
+  #               ref: `refs/tags/${tagName}`,
+  #               sha: context.sha
+  #             });
+  #             console.log(`Tag ${tagName} created successfully.`);
+  #           } catch (e) {
+  #             console.log(`Tag ${tagName} not created.`, e);
+  #             core.setFailed(e.message);
+  #           }
 
-      - name: Create release
-        uses: ncipollo/release-action@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          name: D2RMM ${{ needs.check-version.outputs.current_version }}
-          tag: v${{ needs.check-version.outputs.current_version }}
-          draft: false
-          prerelease: true
-          artifacts: 'artifacts/*'
-          artifactErrorsFailBuild: true
-          generateReleaseNotes: false
+  #     - name: Create release
+  #       uses: ncipollo/release-action@v1
+  #       with:
+  #         token: ${{ secrets.GITHUB_TOKEN }}
+  #         name: D2RMM ${{ needs.check-version.outputs.current_version }}
+  #         tag: v${{ needs.check-version.outputs.current_version }}
+  #         draft: false
+  #         prerelease: true
+  #         artifacts: 'artifacts/*'
+  #         artifactErrorsFailBuild: true
+  #         generateReleaseNotes: false
 
-      - name: Publish pre-release
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const tagName = "v${{ needs.check-version.outputs.current_version }}";
-            const { data: allReleases } = await github.rest.repos.listReleases({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              per_page: 100
-            });
-            const release = allReleases.find(r => r.tag_name === tagName);
-            if (!release) {
-              console.log(`Release ${tagName} not found.`);
-              return;
-            }
+  #     - name: Publish pre-release
+  #       uses: actions/github-script@v7
+  #       with:
+  #         script: |
+  #           const tagName = "v${{ needs.check-version.outputs.current_version }}";
+  #           const { data: allReleases } = await github.rest.repos.listReleases({
+  #             owner: context.repo.owner,
+  #             repo: context.repo.repo,
+  #             per_page: 100
+  #           });
+  #           const release = allReleases.find(r => r.tag_name === tagName);
+  #           if (!release) {
+  #             console.log(`Release ${tagName} not found.`);
+  #             return;
+  #           }
 
-            // Generate release notes: commits since last non-pre-release.
-            let body = '';
-            let commitCount = 0;
-            const lastRelease = allReleases.find(r => !r.prerelease && !r.draft);
-            if (lastRelease) {
-              const baseTag = lastRelease.tag_name;
-              console.log(`Comparing ${baseTag}...${context.sha}`);
-              const { data: comparison } = await github.rest.repos.compareCommitsWithBasehead({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                basehead: `${baseTag}...${context.sha}`
-              });
-              commitCount = comparison.commits.length;
-              if (commitCount > 0) {
-                const bullets = comparison.commits
-                  .slice()
-                  .reverse() // newest first
-                  .map(c => {
-                    const sha = c.sha.substring(0, 7);
-                    const message = c.commit.message.split('\n')[0]
-                      // replace "@" with a look-alike to avoid GitHub triggering unintentional mentions
-                      .replace(/@/g, '&#xFF20;');
-                    return `- [\`${sha}\`](${c.html_url}) ${message}`;
-                  })
-                  .join('\n');
-                body = `<details>\n<summary><h2>${commitCount} Changes since ${lastRelease.name || baseTag}</h2></summary>\n\n${bullets}\n</details>`;
-              }
-            }
+  #           // Generate release notes: commits since last non-pre-release.
+  #           let body = '';
+  #           let commitCount = 0;
+  #           const lastRelease = allReleases.find(r => !r.prerelease && !r.draft);
+  #           if (lastRelease) {
+  #             const baseTag = lastRelease.tag_name;
+  #             console.log(`Comparing ${baseTag}...${context.sha}`);
+  #             const { data: comparison } = await github.rest.repos.compareCommitsWithBasehead({
+  #               owner: context.repo.owner,
+  #               repo: context.repo.repo,
+  #               basehead: `${baseTag}...${context.sha}`
+  #             });
+  #             commitCount = comparison.commits.length;
+  #             if (commitCount > 0) {
+  #               const bullets = comparison.commits
+  #                 .slice()
+  #                 .reverse() // newest first
+  #                 .map(c => {
+  #                   const sha = c.sha.substring(0, 7);
+  #                   const message = c.commit.message.split('\n')[0]
+  #                     // replace "@" with a look-alike to avoid GitHub triggering unintentional mentions
+  #                     .replace(/@/g, '&#xFF20;');
+  #                   return `- [\`${sha}\`](${c.html_url}) ${message}`;
+  #                 })
+  #                 .join('\n');
+  #               body = `<details>\n<summary><h2>${commitCount} Changes since ${lastRelease.name || baseTag}</h2></summary>\n\n${bullets}\n</details>`;
+  #             }
+  #           }
 
-            await github.rest.repos.updateRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              release_id: release.id,
-              draft: false,
-              prerelease: true,
-              body
-            });
-            console.log(`Release ${tagName} published as pre-release with ${commitCount} commits in release notes.`);
+  #           await github.rest.repos.updateRelease({
+  #             owner: context.repo.owner,
+  #             repo: context.repo.repo,
+  #             release_id: release.id,
+  #             draft: false,
+  #             prerelease: true,
+  #             body
+  #           });
+  #           console.log(`Release ${tagName} published as pre-release with ${commitCount} commits in release notes.`);
 
-      - name: Create alias tag
-        if: needs.check-version.outputs.version_to_alias != ''
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const aliasTag = "v${{ needs.check-version.outputs.version_to_alias }}";
+  #     - name: Create alias tag
+  #       if: needs.check-version.outputs.version_to_alias != ''
+  #       uses: actions/github-script@v7
+  #       with:
+  #         script: |
+  #           const aliasTag = "v${{ needs.check-version.outputs.version_to_alias }}";
 
-            // Delete any existing alias release so we can recreate it cleanly.
-            const { data: releases } = await github.rest.repos.listReleases({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              per_page: 100
-            });
-            const existing = releases.find(r => r.tag_name === aliasTag);
-            if (existing) {
-              await github.rest.repos.deleteRelease({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                release_id: existing.id
-              });
-              console.log(`Deleted existing release ${aliasTag}`);
-            }
+  #           // Delete any existing alias release so we can recreate it cleanly.
+  #           const { data: releases } = await github.rest.repos.listReleases({
+  #             owner: context.repo.owner,
+  #             repo: context.repo.repo,
+  #             per_page: 100
+  #           });
+  #           const existing = releases.find(r => r.tag_name === aliasTag);
+  #           if (existing) {
+  #             await github.rest.repos.deleteRelease({
+  #               owner: context.repo.owner,
+  #               repo: context.repo.repo,
+  #               release_id: existing.id
+  #             });
+  #             console.log(`Deleted existing release ${aliasTag}`);
+  #           }
 
-            // Delete existing alias tag (if any).
-            try {
-              await github.rest.git.deleteRef({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                ref: `tags/${aliasTag}`
-              });
-              console.log(`Deleted existing tag ${aliasTag}`);
-            } catch (e) {
-              if (!e.message.includes('Reference does not exist')) throw e;
-            }
+  #           // Delete existing alias tag (if any).
+  #           try {
+  #             await github.rest.git.deleteRef({
+  #               owner: context.repo.owner,
+  #               repo: context.repo.repo,
+  #               ref: `tags/${aliasTag}`
+  #             });
+  #             console.log(`Deleted existing tag ${aliasTag}`);
+  #           } catch (e) {
+  #             if (!e.message.includes('Reference does not exist')) throw e;
+  #           }
 
-            // Create alias tag pointing to the same commit as the current release.
-            await github.rest.git.createRef({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              ref: `refs/tags/${aliasTag}`,
-              sha: context.sha
-            });
-            console.log(`Created alias tag ${aliasTag}`);
+  #           // Create alias tag pointing to the same commit as the current release.
+  #           await github.rest.git.createRef({
+  #             owner: context.repo.owner,
+  #             repo: context.repo.repo,
+  #             ref: `refs/tags/${aliasTag}`,
+  #             sha: context.sha
+  #           });
+  #           console.log(`Created alias tag ${aliasTag}`);
 
-      - name: Create alias release
-        if: needs.check-version.outputs.version_to_alias != ''
-        uses: ncipollo/release-action@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          name: D2RMM ${{ needs.check-version.outputs.version_to_alias }}
-          tag: v${{ needs.check-version.outputs.version_to_alias }}
-          draft: false
-          prerelease: true
-          artifacts: 'artifacts/*'
-          artifactErrorsFailBuild: true
-          generateReleaseNotes: false
-          body: "> [!NOTE]\n> This release contains the same files as [D2RMM ${{ needs.check-version.outputs.current_version }}](https://github.com/${{ github.repository }}/releases/tag/v${{ needs.check-version.outputs.current_version }}). It exists only to keep older download links working — please visit the link above for the latest version.<!-- #alias -->"
+  #     - name: Create alias release
+  #       if: needs.check-version.outputs.version_to_alias != ''
+  #       uses: ncipollo/release-action@v1
+  #       with:
+  #         token: ${{ secrets.GITHUB_TOKEN }}
+  #         name: D2RMM ${{ needs.check-version.outputs.version_to_alias }}
+  #         tag: v${{ needs.check-version.outputs.version_to_alias }}
+  #         draft: false
+  #         prerelease: true
+  #         artifacts: 'artifacts/*'
+  #         artifactErrorsFailBuild: true
+  #         generateReleaseNotes: false
+  #         body: "> [!NOTE]\n> This release contains the same files as [D2RMM ${{ needs.check-version.outputs.current_version }}](https://github.com/${{ github.repository }}/releases/tag/v${{ needs.check-version.outputs.current_version }}). It exists only to keep older download links working — please visit the link above for the latest version.<!-- #alias -->"
 
-      - name: Publish alias pre-release
-        if: needs.check-version.outputs.version_to_alias != ''
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const aliasTag = "v${{ needs.check-version.outputs.version_to_alias }}";
-            const { data: releases } = await github.rest.repos.listReleases({
-              owner: context.repo.owner,
-              repo: context.repo.repo
-            });
-            const release = releases.find(r => r.tag_name === aliasTag);
-            if (release) {
-              await github.rest.repos.updateRelease({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                release_id: release.id,
-                draft: false,
-                prerelease: true
-              });
-              console.log(`Alias release ${aliasTag} published as pre-release.`);
-            }
+  #     - name: Publish alias pre-release
+  #       if: needs.check-version.outputs.version_to_alias != ''
+  #       uses: actions/github-script@v7
+  #       with:
+  #         script: |
+  #           const aliasTag = "v${{ needs.check-version.outputs.version_to_alias }}";
+  #           const { data: releases } = await github.rest.repos.listReleases({
+  #             owner: context.repo.owner,
+  #             repo: context.repo.repo
+  #           });
+  #           const release = releases.find(r => r.tag_name === aliasTag);
+  #           if (release) {
+  #             await github.rest.repos.updateRelease({
+  #               owner: context.repo.owner,
+  #               repo: context.repo.repo,
+  #               release_id: release.id,
+  #               draft: false,
+  #               prerelease: true
+  #             });
+  #             console.log(`Alias release ${aliasTag} published as pre-release.`);
+  #           }
 
-      - name: Finalize pre-release
-        if: needs.check-version.outputs.version_to_release != ''
-        uses: ncipollo/release-action@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          name: D2RMM ${{ needs.check-version.outputs.version_to_release }}
-          tag: v${{ needs.check-version.outputs.version_to_release }}
-          allowUpdates: true
-          prerelease: false
+  #     - name: Finalize pre-release
+  #       if: needs.check-version.outputs.version_to_release != ''
+  #       uses: ncipollo/release-action@v1
+  #       with:
+  #         token: ${{ secrets.GITHUB_TOKEN }}
+  #         name: D2RMM ${{ needs.check-version.outputs.version_to_release }}
+  #         tag: v${{ needs.check-version.outputs.version_to_release }}
+  #         allowUpdates: true
+  #         prerelease: false
 
-      - name: Finalize alias pre-release
-        if: needs.check-version.outputs.version_to_release != ''
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const previousTag = "v${{ needs.check-version.outputs.version_to_release }}";
-            const { data: releases } = await github.rest.repos.listReleases({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              per_page: 100
-            });
-            // Find alias releases that point to the previous version by their body text.
-            const aliasReleases = releases.filter(r =>
-              r.prerelease && r.body && r.body.includes('#alias') && r.body.includes(`/releases/tag/${previousTag}`)
-            );
-            for (const alias of aliasReleases) {
-              await github.rest.repos.updateRelease({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                release_id: alias.id,
-                prerelease: false
-              });
-              console.log(`Finalized alias release ${alias.tag_name}.`);
-            }
-            if (aliasReleases.length === 0) {
-              console.log(`No alias releases found for ${previousTag}.`);
-            }
+  #     - name: Finalize alias pre-release
+  #       if: needs.check-version.outputs.version_to_release != ''
+  #       uses: actions/github-script@v7
+  #       with:
+  #         script: |
+  #           const previousTag = "v${{ needs.check-version.outputs.version_to_release }}";
+  #           const { data: releases } = await github.rest.repos.listReleases({
+  #             owner: context.repo.owner,
+  #             repo: context.repo.repo,
+  #             per_page: 100
+  #           });
+  #           // Find alias releases that point to the previous version by their body text.
+  #           const aliasReleases = releases.filter(r =>
+  #             r.prerelease && r.body && r.body.includes('#alias') && r.body.includes(`/releases/tag/${previousTag}`)
+  #           );
+  #           for (const alias of aliasReleases) {
+  #             await github.rest.repos.updateRelease({
+  #               owner: context.repo.owner,
+  #               repo: context.repo.repo,
+  #               release_id: alias.id,
+  #               prerelease: false
+  #             });
+  #             console.log(`Finalized alias release ${alias.tag_name}.`);
+  #           }
+  #           if (aliasReleases.length === 0) {
+  #             console.log(`No alias releases found for ${previousTag}.`);
+  #           }
 
-  docs:
-    needs: release
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  # docs:
+  #   needs: release
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
 
-      - name: Install Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
+  #     - name: Install Node
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 22
 
-      # GitHub dependencies don't work in GitHub Action workflows...
-      - name: Remove CascLib dependency
-        run: npm remove CascLib --force
+  #     # GitHub dependencies don't work in GitHub Action workflows...
+  #     - name: Remove CascLib dependency
+  #       run: npm remove CascLib --force
 
-      # Skip postinstall (native module compilation) since docs only need typedoc
-      - name: Install dependencies
-        run: npm install --ignore-scripts
+  #     # Skip postinstall (native module compilation) since docs only need typedoc
+  #     - name: Install dependencies
+  #       run: npm install --ignore-scripts
 
-      - name: Generate documentation
-        run: npm run docs
+  #     - name: Generate documentation
+  #       run: npm run docs
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs
+  #     - name: Deploy to GitHub Pages
+  #       uses: peaceiris/actions-gh-pages@v4
+  #       with:
+  #         github_token: ${{ secrets.GITHUB_TOKEN }}
+  #         publish_dir: ./docs
